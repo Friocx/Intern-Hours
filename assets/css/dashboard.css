@@ -479,6 +479,22 @@
 @media (max-width: 768px) {
   .dashboard-container {
     grid-template-columns: 1fr;
+    padding: 12px;
+    gap: 16px;
+  }
+
+  .calendar-section {
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .calendar-header h2 {
+    font-size: 18px;
+  }
+
+  .calendar-nav button {
+    padding: 6px 12px;
+    font-size: 12px;
   }
 
   .filter-section {
@@ -500,9 +516,35 @@
 
   .calendar-grid {
     grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+
+  .day-header {
+    padding: 4px;
+    font-size: 10px;
   }
 
   .day-cell {
-    font-size: 12px;
+    font-size: 11px;
+    border-radius: 8px;
+  }
+
+  .day-cell-inner {
+    padding: 6px;
+  }
+
+  .day-cell-date {
+    font-size: 11px;
+  }
+
+  .day-cell-hours {
+    font-size: 10px;
+  }
+
+  .absence-badge {
+    font-size: 8px;
+    padding: 1px 2px;
+    margin-top: 2px;
   }
 }
+
