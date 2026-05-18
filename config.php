@@ -47,32 +47,6 @@ try {
     // Auto-migration: Ensure columns exist
     $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT FALSE");
     $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_darkmode BOOLEAN DEFAULT FALSE");
-
-    // Auto-migration: Create biometrics and attendance log tables
-    $pdo->exec("
-        CREATE TABLE IF NOT EXISTS biometric_credentials (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            user_id INT NOT NULL,
-            credential_id VARCHAR(255) NOT NULL UNIQUE,
-            public_key TEXT NOT NULL,
-            sign_count INT NOT NULL DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-    ");
-
-    $pdo->exec("
-        CREATE TABLE IF NOT EXISTS attendance_logs (
-            log_id INT AUTO_INCREMENT PRIMARY KEY,
-            employee_id INT NOT NULL,
-            device_token VARCHAR(255) NOT NULL,
-            action_type ENUM('clock_in', 'clock_out') NOT NULL,
-            gps_latitude DECIMAL(10, 8),
-            gps_longitude DECIMAL(11, 8),
-            server_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (employee_id) REFERENCES users(id) ON DELETE CASCADE
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-    ");
 } catch (PDOException $e) {
     die("Connection failed: " . $e->getMessage());
 }

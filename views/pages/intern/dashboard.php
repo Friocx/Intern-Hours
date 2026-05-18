@@ -379,20 +379,6 @@ $base_url = "../";
                         <span>☀️ Afternoon Time Out</span>
                         <span class="btn-status" id="status-afternoon-out">--:--</span>
                     </button>
-
-                    <!-- Sleek Biometric stamp integration -->
-                    <div style="margin-top: 16px; padding-top: 16px; border-top: 1px dashed rgba(255,255,255,0.15);" class="biometric-actions-container">
-                        <button class="quick-clock-btn" id="biometric-clock-btn" onclick="biometricClock()" style="background: linear-gradient(135deg, #4f46e5, #7c3aed); border: none; color: white; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: bold; width: 100%; border-radius: 12px; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.2); cursor: pointer; padding: 12px 16px;">
-                            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width: 18px; height: 18px; shrink: 0;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 009 11a5 5 0 00-10 0c0 1.017.07 2.019.203 3m-6.973-.001A13.9 13.9 0 003 11c0-1.898.377-3.707 1.057-5.364m-.633 13.731A13.89 13.89 0 0012 21c3.517 0 6.799-1.009 9.571-2.753m-2.04-3.44l-.09.054A13.916 13.916 0 0011 15c0 1.017-.07 2.019-.203 3m-6.973-.001A13.9 13.9 0 0011 3c1.898 0 3.707.377 5.364 1.057m-13.731-.633A13.89 13.89 0 003 12c0 3.517 1.009 6.799 2.753 9.571m3.44-2.04l.09-.054A13.916 13.916 0 0015 11c0-1.017.07-2.019.203-3m6.973.001A13.9 13.9 0 0013 3c-1.898 0-3.707.377-5.364 1.057m13.731.633A13.89 13.89 0 0021 12c0-3.517-1.009-6.799-2.753-9.571m-3.44 2.04l-.054.09z"></path></svg>
-                            Fingerprint Stamp
-                        </button>
-                        <div style="text-align: center; margin-top: 8px;">
-                            <a href="javascript:void(0)" onclick="enrollBiometrics()" class="text-indigo-400 hover:text-indigo-300 font-bold text-xs" style="text-decoration: underline; text-underline-offset: 4px; display: inline-flex; align-items: center; gap: 4px; transition: color 0.2s;">
-                                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width: 12px; height: 12px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-                                Enroll Fingerprint Sensor
-                            </a>
-                        </div>
-                    </div>
                 </div>
             </div>
 
@@ -644,4 +630,3 @@ $base_url = "../";
     </script>
     <script src="../assets/js/dashboard.js"></script>
     <script src="../assets/js/colleagues.js"></script>
-    <script src="../assets/js/biometrics.js"></script>
