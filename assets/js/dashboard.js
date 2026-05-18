@@ -789,7 +789,7 @@ function updateStats() {
     String(today.getDate()).padStart(2, "0");
   const todayHoursEl = document.getElementById("today-hours");
   if (todayHoursEl)
-    todayHoursEl.textContent = (hoursData[todayStr] || 0).toFixed(1);
+    todayHoursEl.textContent = parseFloat(hoursData[todayStr] || 0).toFixed(1);
 
   // Average
   const daysLogged = Object.keys(monthHoursData).length;
