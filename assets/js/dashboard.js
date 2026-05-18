@@ -954,8 +954,14 @@ function downloadPDF() {
   fetch(url)
     .then(response => {
       if (!response.ok) {
-        return response.json().then(err => {
-          throw new Error(err.error || "Server error");
+        return response.text().then(text => {
+          try {
+            const err = JSON.parse(text);
+            throw new Error(err.error || "Server error");
+          } catch (e) {
+            const plainText = text.replace(/<[^>]*>/g, '').trim().substring(0, 150);
+            throw new Error(plainText || `Server error (${response.status})`);
+          }
         });
       }
       return response.blob();
