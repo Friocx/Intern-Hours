@@ -1,6 +1,45 @@
 // Global variables will be initialized in the PHP file
 // currentMonth, currentYear, selectedDate, hoursData, monthHoursData, allHoursData, userId, filterFromDate, filterToDate
 
+const fixedHolidays = {
+  "01-01": "New Year's Day",
+  "02-25": "EDSA Revolution",
+  "04-09": "Araw ng Kagitingan",
+  "05-01": "Labor Day",
+  "06-12": "Independence Day",
+  "08-21": "Ninoy Aquino Day",
+  "11-01": "All Saints' Day",
+  "11-02": "All Souls' Day",
+  "11-30": "Bonifacio Day",
+  "12-08": "Immaculate Conception",
+  "12-25": "Christmas Day",
+  "12-30": "Rizal Day",
+  "12-31": "New Year's Eve",
+
+  "02-21": "Lawrenze Bheras Day",
+};
+
+const movableHolidays = {
+  // 2024
+  "2024-02-10": "Chinese New Year",
+  "2024-03-28": "Maundy Thursday",
+  "2024-03-29": "Good Friday",
+  "2024-03-30": "Black Saturday",
+  "2024-08-26": "National Heroes Day",
+  // 2025
+  "2025-01-29": "Chinese New Year",
+  "2025-04-17": "Maundy Thursday",
+  "2025-04-18": "Good Friday",
+  "2025-04-19": "Black Saturday",
+  "2025-08-25": "National Heroes Day",
+  // 2026
+  "2026-02-17": "Chinese New Year",
+  "2026-04-02": "Maundy Thursday",
+  "2026-04-03": "Good Friday",
+  "2026-04-04": "Black Saturday",
+  "2026-08-31": "National Heroes Day",
+};
+
 // Initialize calendar
 document.addEventListener("DOMContentLoaded", function () {
   if (document.getElementById("filter-from-date")) {
@@ -21,7 +60,7 @@ function loadInterns() {
   const list = document.getElementById("interns-list");
   if (!list) return;
 
-  fetch("../../../api/interns.php")
+  fetch(apiBasePath + "api/interns.php")
     .then((response) => response.json())
     .then((data) => {
       if (data.success) {
@@ -37,10 +76,16 @@ function loadInterns() {
           if (parseInt(intern.id) === userId) return;
 
           const div = document.createElement("div");
-          div.className = "flex flex-col items-center gap-2 bg-white p-3 rounded-lg border border-gray-100 shadow-sm";
+          div.className = "flex flex-col items-center gap-2 bg-white p-3 rounded-lg border border-gray-100 shadow-sm cursor-pointer hover:border-blue-200 hover:shadow-md transition-all";
+          div.title = "Click to view " + intern.name.split(" ")[0] + "'s hours";
+          div.onclick = () => {
+            if (typeof openInternModal === 'function') {
+              openInternModal(parseInt(intern.id));
+            }
+          };
           const hoursBadge = intern.total_hours !== null 
             ? `<div class="mt-1 px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-full">${parseFloat(intern.total_hours).toFixed(1)}h</div>` 
-            : '';
+            : `<div class="mt-1 px-2 py-0.5 bg-gray-100 text-gray-400 text-[10px] font-bold rounded-full">Private</div>`;
             
           div.innerHTML = `
                         <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 font-bold text-lg" title="${intern.email}">
@@ -71,7 +116,7 @@ function setDefaultDates() {
 }
 
 function loadAllHours() {
-  fetch("../../../api/hours.php?all=true" + getUserIdQuery())
+  fetch(apiBasePath + "api/hours.php?all=true" + getUserIdQuery())
     .then((response) => response.json())
     .then((data) => {
       if (data.success) {
@@ -168,10 +213,22 @@ function renderCalendar() {
       cell.classList.add("disabled");
     }
 
+    const monthDay = String(currentMonth).padStart(2, "0") + "-" + dateStr;
+    const holiday = movableHolidays[fullDate] || fixedHolidays[monthDay];
+
+    if (holiday) {
+      console.log(`Holiday found: ${fullDate} (${monthDay}) - ${holiday}`);
+      cell.classList.add("holiday");
+    }
+
     cell.innerHTML = `
-            <div class="day-cell-date">${day}</div>
-            ${hoursData[fullDate] ? `<div class="day-cell-hours">${hoursData[fullDate]}h</div>` : ""}
-            ${absencesData[fullDate] ? `<div class="absence-badge ${absencesData[fullDate].status.toLowerCase()}">${absencesData[fullDate].status}</div>` : ""}
+            <div class="day-cell-spotlight"></div>
+            <div class="day-cell-inner">
+                <div class="day-cell-date">${day}</div>
+                ${hoursData[fullDate] ? `<div class="day-cell-hours">${hoursData[fullDate]}h</div>` : ""}
+                ${absencesData[fullDate] ? `<div class="absence-badge ${absencesData[fullDate].status.toLowerCase()}">${absencesData[fullDate].status}</div>` : ""}
+                ${holiday ? `<div class="holiday-badge" title="${holiday}">${holiday}</div>` : ""}
+            </div>
         `;
 
     if (!isFuture) {
@@ -179,7 +236,38 @@ function renderCalendar() {
     } else {
       cell.onclick = () => openAbsenceModal(fullDate);
     }
+
     calendarGrid.appendChild(cell);
+  }
+
+  // High-performance proximity border glow for the entire Bento Grid
+  const grid = document.getElementById("calendar-grid");
+  if (grid) {
+    // Enable glowing border calculations when mouse is within the grid
+    grid.addEventListener("mouseenter", () => {
+      grid.querySelectorAll(".day-cell").forEach(cell => {
+        cell.style.setProperty("--border-opacity", "1");
+      });
+    });
+
+    // Fade out glows when mouse leaves the grid completely
+    grid.addEventListener("mouseleave", () => {
+      grid.querySelectorAll(".day-cell").forEach(cell => {
+        cell.style.setProperty("--border-opacity", "0");
+      });
+    });
+
+    // Track coordinates globally for all active day cells in the grid
+    grid.addEventListener("mousemove", (e) => {
+      const activeCells = grid.querySelectorAll(".day-cell:not(.disabled):not(.other-month)");
+      activeCells.forEach(cell => {
+        const rect = cell.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        cell.style.setProperty("--mouse-x", `${x}px`);
+        cell.style.setProperty("--mouse-y", `${y}px`);
+      });
+    });
   }
 
   updateStats();
@@ -187,7 +275,7 @@ function renderCalendar() {
 
 function loadAbsences() {
   fetch(
-    "../../../api/absences.php?month=" +
+    apiBasePath + "api/absences.php?month=" +
       currentMonth +
       "&year=" +
       currentYear +
@@ -254,7 +342,7 @@ function saveAbsence() {
   formData.append("date", selectedDate);
   formData.append("reason", reason);
 
-  fetch("../../../api/absences.php", {
+  fetch(apiBasePath + "api/absences.php", {
     method: "POST",
     body: formData,
   })
@@ -283,7 +371,7 @@ function deleteAbsence() {
   formData.append("action", "delete");
   formData.append("id", absence.absences_id);
 
-  fetch("../../../api/absences.php", {
+  fetch(apiBasePath + "api/absences.php", {
     method: "POST",
     body: formData,
   })
@@ -305,7 +393,7 @@ function deleteAbsence() {
 
 function loadHours() {
   fetch(
-    "../../../api/hours.php?month=" +
+    apiBasePath + "api/hours.php?month=" +
       currentMonth +
       "&year=" +
       currentYear +
@@ -350,7 +438,7 @@ function saveHours() {
   formData.append("date", selectedDate);
   formData.append("hours", hours);
 
-  fetch("../../../api/hours.php", {
+  fetch(apiBasePath + "api/hours.php", {
     method: "POST",
     body: formData,
   })
@@ -379,7 +467,7 @@ function deleteHours() {
   formData.append("date", selectedDate);
   formData.append("delete", "true");
 
-  fetch("../../../api/hours.php", {
+  fetch(apiBasePath + "api/hours.php", {
     method: "POST",
     body: formData,
   })
@@ -500,7 +588,7 @@ function loadFilteredHours() {
   params.append("from_date", filterFromDate);
   params.append("to_date", filterToDate);
 
-  fetch("../../../api/hours.php?" + params.toString() + getUserIdQuery())
+  fetch(apiBasePath + "api/hours.php?" + params.toString() + getUserIdQuery())
     .then((response) => response.json())
     .then((data) => {
       if (data.success) {
