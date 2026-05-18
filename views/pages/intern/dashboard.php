@@ -7,6 +7,16 @@ if (basename($_SERVER['PHP_SELF']) == basename(__FILE__)) {
 
 $user_id = $_SESSION['user_id'];
 $user_name = $_SESSION['user_name'];
+
+// Fetch burnout settings
+$burnout_stmt = $pdo->prepare("SELECT hour_goal, hour_from, duty_from, duty_to FROM burnout_counter WHERE user_id = ?");
+$burnout_stmt->execute([$user_id]);
+$burnout = $burnout_stmt->fetch();
+$hour_goal = $burnout ? (int)$burnout['hour_goal'] : 480;
+$hour_from = $burnout ? date('Y-m-d', strtotime($burnout['hour_from'])) : date('Y-m-d');
+$duty_from = $burnout ? $burnout['duty_from'] : 'Monday';
+$duty_to = $burnout ? $burnout['duty_to'] : 'Friday';
+
 $current_month = (int)($_GET['month'] ?? date('m'));
 $current_year = (int)($_GET['year'] ?? date('Y'));
 
@@ -38,6 +48,164 @@ $base_url = "../";
             <h1 class="text-2xl font-bold text-gray-900">Welcome, <?php echo htmlspecialchars($user_name); ?></h1>
             <p class="text-gray-600"><?php echo htmlspecialchars($_SESSION['office_name'] ?? 'N/A'); ?> | <?php echo htmlspecialchars($_SESSION['organization_name'] ?? 'N/A'); ?></p>
         </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <style>
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: 180px 1fr 240px;
+            gap: 24px;
+            align-items: center;
+        }
+
+        @media (max-width: 900px) {
+            .analytics-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+        }
+
+        .chart-box {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            height: 200px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-sizing: border-box;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+            transition: all 0.3s ease;
+        }
+
+        .chart-box:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+            border-color: #cbd5e1;
+        }
+
+        .chart-box.flex-grow {
+            align-items: stretch;
+        }
+
+        .chart-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .burndown-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            text-align: left;
+            width: 100%;
+        }
+
+        .burndown-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            color: #475569;
+            font-weight: 600;
+        }
+
+        .burndown-item.highlight {
+            background: #f0fdf4;
+            padding: 8px 12px;
+            border-radius: 10px;
+            border: 1px solid #bbf7d0;
+            margin-top: 6px;
+        }
+
+        .burndown-item .label {
+            color: #64748b;
+        }
+
+        .burndown-item .value {
+            color: #1e293b;
+        }
+
+        .text-blue {
+            color: #2563eb !important;
+        }
+
+        .text-green {
+            color: #16a34a !important;
+        }
+        </style>
+
+        <!-- Internship Burnout Counter -->
+        <div class="analytics-card full-width mb-6 glass-card p-6" style="background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); border-radius: 16px; border: 1px solid rgba(226, 232, 240, 0.8); box-shadow: 0 10px 30px -10px rgba(0,0,0,0.04);">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; border-bottom: 1px solid #e2e8f0; padding-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+                <div>
+                    <h3 class="text-xl font-extrabold text-gray-900" style="display: flex; align-items: center; gap: 10px; margin: 0; letter-spacing: -0.02em;">
+                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="stroke-width: 2.2;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2"></path></svg>
+                        Internship Burnout Counter
+                    </h3>
+                    <p style="font-size: 12px; color: #64748b; margin-top: 4px; font-weight: 500;">
+                        Started: <span class="font-bold text-gray-700"><?php echo date('M d, Y', strtotime($hour_from)); ?></span> &bull; 
+                        Schedule: <span class="font-bold text-gray-700"><?php echo $duty_from; ?> to <?php echo $duty_to; ?></span>
+                    </p>
+                </div>
+                <span style="font-size: 12px; font-weight: 800; color: #1e3a8a; background: #eff6ff; border: 1px solid #bfdbfe; padding: 6px 14px; border-radius: 9999px; letter-spacing: 0.02em; box-shadow: 0 2px 5px rgba(59, 130, 246, 0.05);">
+                    Goal: <?php echo $hour_goal; ?> Hours
+                </span>
+            </div>
+            
+            <div class="analytics-grid">
+                <!-- Doughnut Gauge Chart -->
+                <div class="chart-box">
+                    <h4 class="chart-title">Progress to Target</h4>
+                    <div style="position: relative; width: 120px; height: 120px; margin: 8px auto 0 auto;">
+                        <canvas id="progressChart"></canvas>
+                        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none;">
+                            <div id="chart-percent" style="font-size: 20px; font-weight: 900; color: #0f172a; line-height: 1; letter-spacing: -0.03em;">0%</div>
+                            <div id="chart-ratio" style="font-size: 10px; color: #64748b; font-weight: 700; margin-top: 2px;">0/<?php echo $hour_goal; ?>h</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Weekly Bar Chart -->
+                <div class="chart-box flex-grow">
+                    <h4 class="chart-title">Hours Logged per Day (This Month)</h4>
+                    <div style="position: relative; height: 130px; width: 100%; margin-top: 8px;">
+                        <canvas id="hoursBarChart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Burndown Calculator Metrics -->
+                <div class="chart-box burndown-box" style="align-items: stretch;">
+                    <h4 class="chart-title">Burndown Calculator</h4>
+                    <div class="burndown-list" style="margin-top: 4px;">
+                        <div class="burndown-item" style="border-bottom: 1px solid #f1f5f9; padding-bottom: 6px; margin-bottom: 4px;">
+                            <span class="label">Target:</span>
+                            <span class="value"><?php echo $hour_goal; ?> hrs</span>
+                        </div>
+                        <div class="burndown-item" style="border-bottom: 1px solid #f1f5f9; padding-bottom: 6px; margin-bottom: 4px;">
+                            <span class="label">Remaining:</span>
+                            <span class="value text-blue" id="burndown-remaining">—</span>
+                        </div>
+                        <div class="burndown-item" style="border-bottom: 1px solid #f1f5f9; padding-bottom: 6px; margin-bottom: 4px;">
+                            <span class="label">Daily Avg:</span>
+                            <span class="value" id="burndown-avg">—</span>
+                        </div>
+                        <div class="burndown-item highlight" style="box-shadow: 0 2px 4px rgba(22, 163, 74, 0.05);">
+                            <span class="label" style="color: #15803d;">Est. Completion:</span>
+                            <span class="value text-green font-bold" id="burndown-completion">—</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="calendar-section">
 
             <div class="calendar-header">
@@ -272,6 +440,10 @@ $base_url = "../";
         const currentUserId = userId;
         const apiBasePath = '../';
         const birthdaysData = <?php echo json_encode($birthdays); ?>;
+        const hourGoal = parseInt('<?php echo $hour_goal; ?>');
+        const hourFrom = '<?php echo $hour_from; ?>';
+        const dutyFrom = '<?php echo $duty_from; ?>';
+        const dutyTo = '<?php echo $duty_to; ?>';
     </script>
     <script src="../assets/js/dashboard.js"></script>
     <script src="../assets/js/colleagues.js"></script>

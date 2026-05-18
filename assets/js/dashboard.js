@@ -796,6 +796,11 @@ function updateStats() {
   const average = daysLogged > 0 ? monthTotal / daysLogged : 0;
   const averageEl = document.getElementById("average-hours");
   if (averageEl) averageEl.textContent = average.toFixed(1);
+
+  // Render Charts
+  if (typeof renderDashboardCharts === "function") {
+    renderDashboardCharts();
+  }
 }
 
 function updateTotalHours() {
@@ -804,6 +809,11 @@ function updateTotalHours() {
     0,
   );
   document.getElementById("total-hours").textContent = total.toFixed(1);
+
+  // Render Charts
+  if (typeof renderDashboardCharts === "function") {
+    renderDashboardCharts();
+  }
 }
 
 function applyFilter() {
@@ -986,4 +996,186 @@ function downloadPDF() {
       btn.innerHTML = originalText;
     });
 }
+
+// =========================================================================
+// 📊 INTERACTIVE CHARTS & BURNDOWN ENGINE (Powered by Chart.js)
+// =========================================================================
+
+let myProgressChart = null;
+let myBarChart = null;
+
+function renderDashboardCharts() {
+  const progressCanvas = document.getElementById("progressChart");
+  const barCanvas = document.getElementById("hoursBarChart");
+  
+  if (!progressCanvas || !barCanvas) return;
+  if (typeof Chart === "undefined") return;
+
+  // 1. Calculate stats
+  const totalLogged = Object.values(allHoursData).reduce((sum, val) => sum + parseFloat(val), 0);
+  const target = typeof hourGoal !== "undefined" ? hourGoal : 480;
+  
+  const percent = Math.min((totalLogged / target) * 100, 100);
+  const displayPercent = (totalLogged / target) * 100;
+  
+  const remaining = Math.max(target - totalLogged, 0);
+  
+  // Calculate average of days with logged hours
+  const loggedDays = Object.values(allHoursData).filter(val => parseFloat(val) > 0);
+  const totalLoggedDaysCount = loggedDays.length;
+  const dailyAverage = totalLoggedDaysCount > 0 ? totalLogged / totalLoggedDaysCount : 0;
+  
+  // Update HTML elements
+  const percentEl = document.getElementById("chart-percent");
+  if (percentEl) percentEl.textContent = `${displayPercent.toFixed(0)}%`;
+  
+  const ratioEl = document.getElementById("chart-ratio");
+  if (ratioEl) ratioEl.textContent = `${totalLogged.toFixed(1)}/${target}h`;
+  
+  const remainingEl = document.getElementById("burndown-remaining");
+  if (remainingEl) remainingEl.textContent = `${remaining.toFixed(1)} hrs`;
+  
+  const avgEl = document.getElementById("burndown-avg");
+  if (avgEl) avgEl.textContent = `${dailyAverage.toFixed(1)} hrs/day`;
+  
+  const compEl = document.getElementById("burndown-completion");
+  if (compEl) {
+    compEl.textContent = calculateEstimatedCompletion(remaining, dailyAverage);
+  }
+
+  // 2. Render Doughnut Gauge Chart
+  if (myProgressChart) {
+    myProgressChart.destroy();
+  }
+  
+  myProgressChart = new Chart(progressCanvas, {
+    type: 'doughnut',
+    data: {
+      datasets: [{
+        data: [totalLogged, remaining],
+        backgroundColor: ['#2563eb', '#e2e8f0'],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      cutout: '80%',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { enabled: false }
+      }
+    }
+  });
+
+  // 3. Render Monthly Bar Chart
+  if (myBarChart) {
+    myBarChart.destroy();
+  }
+
+  // Get days in current month
+  const lastDay = new Date(currentYear, currentMonth, 0).getDate();
+  const labels = [];
+  const barData = [];
+  
+  for (let day = 1; day <= lastDay; day++) {
+    const dateStr = String(day).padStart(2, "0");
+    const fullDate = currentYear + "-" + String(currentMonth).padStart(2, "0") + "-" + dateStr;
+    labels.push(day);
+    barData.push(parseFloat(monthHoursData[fullDate] || 0));
+  }
+
+  myBarChart = new Chart(barCanvas, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Hours Logged',
+        data: barData,
+        backgroundColor: 'rgba(37, 99, 235, 0.75)',
+        hoverBackgroundColor: '#2563eb',
+        borderRadius: 4,
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { font: { size: 10 } }
+        },
+        y: {
+          grid: { color: '#f1f5f9' },
+          ticks: { font: { size: 10 }, stepSize: 2 }
+        }
+      }
+    }
+  });
+}
+
+function calculateEstimatedCompletion(remainingHours, dailyAvg) {
+  if (remainingHours <= 0) return "Goal Met";
+  if (dailyAvg <= 0) return "N/A";
+
+  const daysNeeded = Math.ceil(remainingHours / dailyAvg);
+  let currentDate = new Date();
+  let addedDays = 0;
+  let safetyLoop = 0;
+
+  const dayMap = {
+    'Sunday': 0,
+    'Monday': 1,
+    'Tuesday': 2,
+    'Wednesday': 3,
+    'Thursday': 4,
+    'Friday': 5,
+    'Saturday': 6
+  };
+
+  const fDay = typeof dutyFrom !== 'undefined' ? dutyFrom : 'Monday';
+  const tDay = typeof dutyTo !== 'undefined' ? dutyTo : 'Friday';
+  
+  const fromIdx = dayMap[fDay];
+  const toIdx = dayMap[tDay];
+
+  while (addedDays < daysNeeded && safetyLoop < 1000) {
+    safetyLoop++;
+    currentDate.setDate(currentDate.getDate() + 1);
+    
+    // Check if on-duty day
+    const dayOfWeek = currentDate.getDay();
+    let isDuty = false;
+    if (fromIdx <= toIdx) {
+      isDuty = (dayOfWeek >= fromIdx && dayOfWeek <= toIdx);
+    } else {
+      isDuty = (dayOfWeek >= fromIdx || dayOfWeek <= toIdx);
+    }
+
+    if (!isDuty) {
+      continue; // Skip off-duty days
+    }
+
+    // Check if holiday
+    const dateStr = currentDate.getFullYear() + "-" + 
+                    String(currentDate.getMonth() + 1).padStart(2, '0') + "-" + 
+                    String(currentDate.getDate()).padStart(2, '0');
+    const monthDay = String(currentDate.getMonth() + 1).padStart(2, '0') + "-" + 
+                     String(currentDate.getDate()).padStart(2, '0');
+    
+    if (movableHolidays[dateStr] || fixedHolidays[monthDay]) {
+      continue; // Skip holidays
+    }
+
+    addedDays++;
+  }
+
+  const options = { year: 'numeric', month: 'short', day: 'numeric' };
+  return currentDate.toLocaleDateString('en-US', options);
+}
+
 
