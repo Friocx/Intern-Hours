@@ -33,10 +33,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $organization_id = $_POST['organization_id'] ?? '';
     $new_office_name = trim($_POST['new_office_name'] ?? '');
     $new_organization_name = trim($_POST['new_organization_name'] ?? '');
+    $terms_agree = $_POST['terms_agree'] ?? '';
 
     // Validation
     if (empty($name) || empty($email) || empty($password) || empty($role) || empty($office_id) || empty($organization_id)) {
         $error = "All fields are required.";
+    } elseif (empty($terms_agree)) {
+        $error = "You must agree to the Terms of Service.";
     } elseif ($password !== $confirm_password) {
         $error = "Passwords do not match.";
     } elseif (strlen($password) < 6) {

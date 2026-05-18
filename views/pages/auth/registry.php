@@ -82,6 +82,14 @@
                 <input type="text" id="new_organization_name" name="new_organization_name" placeholder="Enter new organization name" style="display: none; margin-top: 10px;">
             </div>
 
+            <!-- Terms of Service Agreement Checkbox -->
+            <div class="form-group" style="display: flex; align-items: flex-start; gap: 8px; margin: 15px 0 20px 0; text-align: left;">
+                <input type="checkbox" id="terms_agree" name="terms_agree" required style="width: 18px; height: 18px; cursor: pointer; margin-top: 3px;">
+                <label for="terms_agree" style="font-size: 13px; color: #555; cursor: pointer; line-height: 1.4; font-weight: normal; user-select: none;">
+                    I agree to the <a href="feed.php?page=terms" target="_blank" style="color: #4f46e5; text-decoration: underline; font-weight: 600;">Terms of Service</a> and certify that all logged hours will be authentic.
+                </label>
+            </div>
+
             <button type="submit" class="btn-primary">Register</button>
         </form>
         <p class="auth-switch">

@@ -10,6 +10,24 @@ $user_name = $_SESSION['user_name'];
 $current_month = (int)($_GET['month'] ?? date('m'));
 $current_year = (int)($_GET['year'] ?? date('Y'));
 
+$office_id = $_SESSION['office_id'] ?? null;
+$organization_id = $_SESSION['organization_id'] ?? null;
+
+$birthdays = [];
+if ($office_id && $organization_id) {
+    $stmt = $pdo->prepare("
+        SELECT name, nickname, birthdate 
+        FROM users 
+        WHERE office_id = ? 
+          AND organization_id = ? 
+          AND role = 'Intern' 
+          AND birthdate IS NOT NULL 
+          AND birthdate != ''
+    ");
+    $stmt->execute([$office_id, $organization_id]);
+    $birthdays = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
 $base_url = "../";
 ?>
 <link rel="stylesheet" href="<?php echo $base_url; ?>assets/css/dashboard.css">
@@ -38,6 +56,32 @@ $base_url = "../";
         </div>
 
         <div class="stats-sidebar">
+            <!-- Quick Clock-In/Out Card -->
+            <div class="quick-clock-card" id="quick-clock-card">
+                <div class="quick-clock-header">
+                    <div class="quick-clock-title">🕒 Quick Clock-In</div>
+                    <div class="quick-clock-time" id="quick-clock-current-time">00:00</div>
+                </div>
+                <div class="quick-clock-body">
+                    <button class="quick-clock-btn" id="quick-clock-morning-in" onclick="quickClockStamp('morning_in')">
+                        <span>🌅 Morning Time In</span>
+                        <span class="btn-status" id="status-morning-in">--:--</span>
+                    </button>
+                    <button class="quick-clock-btn" id="quick-clock-morning-out" onclick="quickClockStamp('morning_out')">
+                        <span>🌅 Morning Time Out</span>
+                        <span class="btn-status" id="status-morning-out">--:--</span>
+                    </button>
+                    <button class="quick-clock-btn" id="quick-clock-afternoon-in" onclick="quickClockStamp('afternoon_in')">
+                        <span>☀️ Afternoon Time In</span>
+                        <span class="btn-status" id="status-afternoon-in">--:--</span>
+                    </button>
+                    <button class="quick-clock-btn" id="quick-clock-afternoon-out" onclick="quickClockStamp('afternoon_out')">
+                        <span>☀️ Afternoon Time Out</span>
+                        <span class="btn-status" id="status-afternoon-out">--:--</span>
+                    </button>
+                </div>
+            </div>
+
             <div class="stat-card">
                 <div class="stat-label">Total Hours</div>
                 <div class="stat-value">
@@ -140,18 +184,48 @@ $base_url = "../";
         </div>
     </div>
 
-    <!-- Log Hours Modal -->
+    <!-- Log Hours / Check-In Modal -->
     <div class="modal" id="log-modal">
-        <div class="modal-content">
-            <div class="modal-header">Log Hours</div>
-            <div class="form-group">
+        <div class="modal-content" style="max-width: 450px;">
+            <div class="modal-header">Time Log & Check-In</div>
+            <div class="form-group" style="margin-bottom: 15px;">
                 <label>Date</label>
-                <input type="text" id="modal-date" readonly style="background: #f5f5f5;">
+                <input type="text" id="modal-date" readonly style="background: #f8fafc; border: 1px solid #cbd5e1; padding: 8px 12px; font-weight: 600; color: #475569;">
             </div>
-            <div class="form-group">
-                <label>Hours Worked</label>
-                <input type="number" id="modal-hours" min="0" max="24" step="0.5" placeholder="Enter hours">
+            
+            <div class="time-grid">
+                <!-- Morning Segment -->
+                <div class="time-segment">
+                    <div class="time-segment-title">🌅 Morning Segment</div>
+                    <div class="time-input-group">
+                        <label for="modal-morning-in">Time In</label>
+                        <input type="time" id="modal-morning-in" oninput="calculateModalDuration()">
+                    </div>
+                    <div class="time-input-group">
+                        <label for="modal-morning-out">Time Out</label>
+                        <input type="time" id="modal-morning-out" oninput="calculateModalDuration()">
+                    </div>
+                </div>
+
+                <!-- Afternoon Segment -->
+                <div class="time-segment">
+                    <div class="time-segment-title">☀️ Afternoon Segment</div>
+                    <div class="time-input-group">
+                        <label for="modal-afternoon-in">Time In</label>
+                        <input type="time" id="modal-afternoon-in" oninput="calculateModalDuration()">
+                    </div>
+                    <div class="time-input-group">
+                        <label for="modal-afternoon-out">Time Out</label>
+                        <input type="time" id="modal-afternoon-out" oninput="calculateModalDuration()">
+                    </div>
+                </div>
             </div>
+
+            <!-- Live Calculated Duration Preview -->
+            <div class="live-duration-display">
+                Calculated Duty: <span id="modal-duration-preview">0.00</span> hrs
+            </div>
+
             <div class="modal-buttons">
                 <button class="btn-save" onclick="saveHours()">Save</button>
                 <button class="btn-cancel" onclick="closeModal()">Cancel</button>
@@ -194,6 +268,7 @@ $base_url = "../";
         let filterToDate = null;
         const currentUserId = userId;
         const apiBasePath = '../';
+        const birthdaysData = <?php echo json_encode($birthdays); ?>;
     </script>
     <script src="../assets/js/dashboard.js"></script>
     <script src="../assets/js/colleagues.js"></script>
