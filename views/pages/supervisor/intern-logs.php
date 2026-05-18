@@ -25,6 +25,21 @@ if (!$intern) {
     exit;
 }
 
+$birthdays = [];
+if (!empty($intern['office_id']) && !empty($intern['organization_id'])) {
+    $stmt = $pdo->prepare("
+        SELECT name, nickname, birthdate 
+        FROM users 
+        WHERE office_id = ? 
+          AND organization_id = ? 
+          AND role = 'Intern' 
+          AND birthdate IS NOT NULL 
+          AND birthdate != ''
+    ");
+    $stmt->execute([$intern['office_id'], $intern['organization_id']]);
+    $birthdays = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
 $current_month = (int)($_GET['month'] ?? date('m'));
 $current_year = (int)($_GET['year'] ?? date('Y'));
 
@@ -66,6 +81,9 @@ require_once '../../components/header.php';
                 <div class="calendar-nav">
                     <button onclick="previousMonth()">← Prev</button>
                     <button onclick="nextMonth()">Next →</button>
+                    <button class="btn-download-pdf" id="btn-download-pdf" onclick="downloadPDF()">
+                        <span>📄</span> Download DTR
+                    </button>
                 </div>
             </div>
             <div class="calendar-grid" id="calendar-grid"></div>
@@ -121,6 +139,7 @@ require_once '../../components/header.php';
     </div>
 
     <script>
+        const apiBasePath = '../../../';
         let currentMonth = parseInt('<?php echo $current_month; ?>');
         let currentYear = parseInt('<?php echo $current_year; ?>');
         let userId = parseInt('<?php echo $intern_id; ?>');
@@ -132,6 +151,7 @@ require_once '../../components/header.php';
         let allHoursData = {};
         let filterFromDate = null;
         let filterToDate = null;
+        const birthdaysData = <?php echo json_encode($birthdays); ?>;
 
         // Override openLogModal and openAbsenceModal to do nothing in supervisor view
         function openLogModal() {}

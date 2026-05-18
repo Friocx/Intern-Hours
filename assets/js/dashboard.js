@@ -48,6 +48,8 @@ document.addEventListener("DOMContentLoaded", function () {
   loadAllHours();
   loadAbsences();
   loadHours();
+  loadCheckIns();
+  startQuickClockTimer();
   loadInterns();
   renderCalendar();
 });
@@ -60,7 +62,7 @@ function loadInterns() {
   const list = document.getElementById("interns-list");
   if (!list) return;
 
-  fetch("../../../api/interns.php")
+  fetch(apiBasePath + "api/interns.php")
     .then((response) => response.json())
     .then((data) => {
       if (data.success) {
@@ -116,7 +118,7 @@ function setDefaultDates() {
 }
 
 function loadAllHours() {
-  fetch("../../../api/hours.php?all=true" + getUserIdQuery())
+  fetch(apiBasePath + "api/hours.php?all=true" + getUserIdQuery())
     .then((response) => response.json())
     .then((data) => {
       if (data.success) {
@@ -221,11 +223,66 @@ function renderCalendar() {
       cell.classList.add("holiday");
     }
 
+    let birthdayBadgesHtml = "";
+    if (typeof birthdaysData !== "undefined" && Array.isArray(birthdaysData)) {
+      const dayBirthdays = birthdaysData.filter(b => {
+        if (!b.birthdate) return false;
+        const parts = b.birthdate.split(/[-/.]/);
+        if (parts.length !== 3) return false;
+        
+        let bMonth = 0;
+        let bDay = 0;
+        
+        if (parts[0].length === 4) {
+          // YYYY-MM-DD or YYYY/MM/DD
+          bMonth = parseInt(parts[1], 10);
+          bDay = parseInt(parts[2], 10);
+        } else if (parts[2].length === 4) {
+          // MM-DD-YYYY or DD-MM-YYYY
+          const p0 = parseInt(parts[0], 10);
+          const p1 = parseInt(parts[1], 10);
+          if (p0 > 12) {
+            bDay = p0;
+            bMonth = p1;
+          } else if (p1 > 12) {
+            bMonth = p0;
+            bDay = p1;
+          } else {
+            bMonth = p0;
+            bDay = p1;
+          }
+        } else {
+          bMonth = parseInt(parts[1], 10);
+          bDay = parseInt(parts[2], 10);
+        }
+        
+        return bMonth === currentMonth && bDay === day;
+      });
+      
+      dayBirthdays.forEach(b => {
+        const displayName = b.nickname || b.name.split(" ")[0];
+        const parts = b.birthdate.split(/[-/.]/);
+        let ageHtml = "";
+        if (parts.length === 3) {
+          const birthYear = parseInt(parts[0].length === 4 ? parts[0] : (parts[2].length === 4 ? parts[2] : null), 10);
+          if (birthYear && birthYear <= currentYear) {
+            const age = currentYear - birthYear;
+            if (age > 0) {
+              ageHtml = ` (${age})`;
+            }
+          }
+        }
+        birthdayBadgesHtml += `<div class="birthday-badge" title="${displayName}'s Birthday! 🎉">🎂 ${displayName}${ageHtml}</div>`;
+      });
+    }
+
     cell.innerHTML = `
             <div class="day-cell-date">${day}</div>
-            ${hoursData[fullDate] ? `<div class="day-cell-hours">${hoursData[fullDate]}h</div>` : ""}
-            ${absencesData[fullDate] ? `<div class="absence-badge ${absencesData[fullDate].status.toLowerCase()}">${absencesData[fullDate].status}</div>` : ""}
-            ${holiday ? `<div class="holiday-badge" title="${holiday}">${holiday}</div>` : ""}
+              ${hoursData[fullDate] ? `<div class="day-cell-hours">${hoursData[fullDate]}h</div>` : ""}
+              ${absencesData[fullDate] ? `<div class="absence-badge ${absencesData[fullDate].status.toLowerCase()}">${absencesData[fullDate].status}</div>` : ""}
+              ${holiday ? `<div class="holiday-badge" title="${holiday}">${holiday}</div>` : ""}
+              ${birthdayBadgesHtml}
+            <div class="day-cell-spotlight"></div>
         `;
 
     if (!isFuture) {
@@ -233,7 +290,38 @@ function renderCalendar() {
     } else {
       cell.onclick = () => openAbsenceModal(fullDate);
     }
+
     calendarGrid.appendChild(cell);
+  }
+
+  // High-performance proximity border glow for the entire Bento Grid
+  const grid = document.getElementById("calendar-grid");
+  if (grid) {
+    // Enable glowing border calculations when mouse is within the grid
+    grid.addEventListener("mouseenter", () => {
+      grid.querySelectorAll(".day-cell").forEach(cell => {
+        cell.style.setProperty("--border-opacity", "1");
+      });
+    });
+
+    // Fade out glows when mouse leaves the grid completely
+    grid.addEventListener("mouseleave", () => {
+      grid.querySelectorAll(".day-cell").forEach(cell => {
+        cell.style.setProperty("--border-opacity", "0");
+      });
+    });
+
+    // Track coordinates globally for all active day cells in the grid
+    grid.addEventListener("mousemove", (e) => {
+      const activeCells = grid.querySelectorAll(".day-cell:not(.disabled):not(.other-month)");
+      activeCells.forEach(cell => {
+        const rect = cell.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        cell.style.setProperty("--mouse-x", `${x}px`);
+        cell.style.setProperty("--mouse-y", `${y}px`);
+      });
+    });
   }
 
   updateStats();
@@ -241,7 +329,7 @@ function renderCalendar() {
 
 function loadAbsences() {
   fetch(
-    "../../../api/absences.php?month=" +
+    apiBasePath + "api/absences.php?month=" +
       currentMonth +
       "&year=" +
       currentYear +
@@ -308,7 +396,7 @@ function saveAbsence() {
   formData.append("date", selectedDate);
   formData.append("reason", reason);
 
-  fetch("../../../api/absences.php", {
+  fetch(apiBasePath + "api/absences.php", {
     method: "POST",
     body: formData,
   })
@@ -337,7 +425,7 @@ function deleteAbsence() {
   formData.append("action", "delete");
   formData.append("id", absence.absences_id);
 
-  fetch("../../../api/absences.php", {
+  fetch(apiBasePath + "api/absences.php", {
     method: "POST",
     body: formData,
   })
@@ -359,7 +447,7 @@ function deleteAbsence() {
 
 function loadHours() {
   fetch(
-    "../../../api/hours.php?month=" +
+    apiBasePath + "api/hours.php?month=" +
       currentMonth +
       "&year=" +
       currentYear +
@@ -376,15 +464,194 @@ function loadHours() {
     .catch((error) => console.error("Error loading hours:", error));
 }
 
+let checkInsData = {};
+
+function loadCheckIns() {
+  fetch(
+    apiBasePath + "api/check-in.php?month=" +
+      currentMonth +
+      "&year=" +
+      currentYear +
+      getUserIdQuery(),
+  )
+    .then((response) => response.json())
+    .then((data) => {
+      if (data.success) {
+        checkInsData = data.check_ins || {};
+        updateQuickClockWidget();
+      }
+    })
+    .catch((error) => console.error("Error loading check-ins:", error));
+}
+
+function getTodayDateStr() {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function startQuickClockTimer() {
+  if (!document.getElementById("quick-clock-card")) return;
+  const timeEl = document.getElementById("quick-clock-current-time");
+  if (!timeEl) return;
+
+  function updateTime() {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+    timeEl.textContent = timeStr;
+  }
+
+  updateTime();
+  setInterval(updateTime, 1000);
+}
+
+function updateQuickClockWidget() {
+  if (!document.getElementById("quick-clock-card")) return;
+  const todayStr = getTodayDateStr();
+  const todayLogs = checkInsData[todayStr] || {
+    morning_in: "",
+    morning_out: "",
+    afternoon_in: "",
+    afternoon_out: ""
+  };
+
+  const fields = ["morning_in", "morning_out", "afternoon_in", "afternoon_out"];
+  fields.forEach(field => {
+    const btn = document.getElementById(`quick-clock-${field.replace('_', '-')}`);
+    const statusEl = document.getElementById(`status-${field.replace('_', '-')}`);
+    
+    if (btn && statusEl) {
+      if (todayLogs[field]) {
+        statusEl.textContent = todayLogs[field];
+        btn.classList.add("active");
+      } else {
+        statusEl.textContent = "--:--";
+        btn.classList.remove("active");
+      }
+    }
+  });
+}
+
+function quickClockStamp(field) {
+  const todayStr = getTodayDateStr();
+  const todayLogs = JSON.parse(JSON.stringify(checkInsData[todayStr] || {
+    morning_in: "",
+    morning_out: "",
+    afternoon_in: "",
+    afternoon_out: ""
+  }));
+
+  // Toggle or Set current time
+  if (todayLogs[field]) {
+    if (!confirm(`Do you want to clear your clocked time for ${field.replace('_', ' ')}?`)) return;
+    todayLogs[field] = "";
+  } else {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    todayLogs[field] = `${hours}:${minutes}`;
+  }
+
+  const formData = new FormData();
+  formData.append("date", todayStr);
+  formData.append("morning_in", todayLogs.morning_in);
+  formData.append("morning_out", todayLogs.morning_out);
+  formData.append("afternoon_in", todayLogs.afternoon_in);
+  formData.append("afternoon_out", todayLogs.afternoon_out);
+
+  fetch(apiBasePath + "api/check-in.php", {
+    method: "POST",
+    body: formData
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        checkInsData[todayStr] = todayLogs;
+        
+        // Update local hoursData so calendar displays hours instantly
+        if (data.hours > 0) {
+          hoursData[todayStr] = data.hours;
+          monthHoursData[todayStr] = data.hours;
+        } else {
+          delete hoursData[todayStr];
+          delete monthHoursData[todayStr];
+        }
+        
+        renderCalendar();
+        updateQuickClockWidget();
+        loadHours(); // Reload total hours metrics
+      } else {
+        alert(data.error || "Error clocking time");
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      alert("Error clocking time");
+    });
+}
+
+function calculateModalDuration() {
+  const mi = document.getElementById("modal-morning-in").value;
+  const mo = document.getElementById("modal-morning-out").value;
+  const ai = document.getElementById("modal-afternoon-in").value;
+  const ao = document.getElementById("modal-afternoon-out").value;
+
+  let morningHours = 0;
+  if (mi && mo) {
+    const inTime = parseTimeStr(mi);
+    const outTime = parseTimeStr(mo);
+    if (outTime > inTime) {
+      morningHours = (outTime - inTime) / (1000 * 3600);
+    }
+  }
+
+  let afternoonHours = 0;
+  if (ai && ao) {
+    const inTime = parseTimeStr(ai);
+    const outTime = parseTimeStr(ao);
+    if (outTime > inTime) {
+      afternoonHours = (outTime - inTime) / (1000 * 3600);
+    }
+  }
+
+  const total = morningHours + afternoonHours;
+  document.getElementById("modal-duration-preview").textContent = total.toFixed(2);
+}
+
+function parseTimeStr(timeStr) {
+  const parts = timeStr.split(':');
+  const d = new Date();
+  d.setHours(parseInt(parts[0], 10), parseInt(parts[1], 10), 0, 0);
+  return d;
+}
+
 function openLogModal(dateStr) {
   selectedDate = dateStr;
   document.getElementById("modal-date").value = dateStr;
-  document.getElementById("modal-hours").value = hoursData[dateStr] || "";
-  document.getElementById("delete-btn").style.display = hoursData[dateStr]
-    ? "block"
-    : "none";
+
+  // Clear modal inputs
+  document.getElementById("modal-morning-in").value = "";
+  document.getElementById("modal-morning-out").value = "";
+  document.getElementById("modal-afternoon-in").value = "";
+  document.getElementById("modal-afternoon-out").value = "";
+  document.getElementById("modal-duration-preview").textContent = "0.00";
+
+  // Check if check-in log exists for this date
+  const logs = checkInsData[dateStr];
+  if (logs) {
+    document.getElementById("modal-morning-in").value = logs.morning_in || "";
+    document.getElementById("modal-morning-out").value = logs.morning_out || "";
+    document.getElementById("modal-afternoon-in").value = logs.afternoon_in || "";
+    document.getElementById("modal-afternoon-out").value = logs.afternoon_out || "";
+  }
+
+  calculateModalDuration();
+
+  const hasLogs = logs && (logs.morning_in || logs.morning_out || logs.afternoon_in || logs.afternoon_out);
+  document.getElementById("delete-btn").style.display = hasLogs ? "block" : "none";
   document.getElementById("log-modal").classList.add("active");
-  document.getElementById("modal-hours").focus();
 }
 
 function closeModal() {
@@ -393,64 +660,83 @@ function closeModal() {
 }
 
 function saveHours() {
-  const hours = document.getElementById("modal-hours").value;
-
-  if (hours === "" || isNaN(hours) || parseFloat(hours) < 0) {
-    alert("Please enter a valid number of hours");
-    return;
-  }
+  const mi = document.getElementById("modal-morning-in").value;
+  const mo = document.getElementById("modal-morning-out").value;
+  const ai = document.getElementById("modal-afternoon-in").value;
+  const ao = document.getElementById("modal-afternoon-out").value;
 
   const formData = new FormData();
   formData.append("date", selectedDate);
-  formData.append("hours", hours);
+  formData.append("morning_in", mi);
+  formData.append("morning_out", mo);
+  formData.append("afternoon_in", ai);
+  formData.append("afternoon_out", ao);
 
-  fetch("../../../api/hours.php", {
+  fetch(apiBasePath + "api/check-in.php", {
     method: "POST",
     body: formData,
   })
     .then((response) => response.json())
     .then((data) => {
       if (data.success) {
-        const parsedHours = parseFloat(hours);
-        hoursData[selectedDate] = parsedHours;
-        monthHoursData[selectedDate] = parsedHours;
+        checkInsData[selectedDate] = {
+          morning_in: mi,
+          morning_out: mo,
+          afternoon_in: ai,
+          afternoon_out: ao
+        };
+
+        if (data.hours > 0) {
+          hoursData[selectedDate] = data.hours;
+          monthHoursData[selectedDate] = data.hours;
+        } else {
+          delete hoursData[selectedDate];
+          delete monthHoursData[selectedDate];
+        }
+
         renderCalendar();
+        updateQuickClockWidget();
         closeModal();
+        loadHours();
       } else {
-        alert(data.error || "Error saving hours");
+        alert(data.error || "Error saving check-in");
       }
     })
     .catch((error) => {
       console.error("Error:", error);
-      alert("Error saving hours");
+      alert("Error saving check-in");
     });
 }
 
 function deleteHours() {
-  if (!confirm("Are you sure you want to delete this entry?")) return;
+  if (!confirm("Are you sure you want to delete all clocked entries for this date?")) return;
 
   const formData = new FormData();
   formData.append("date", selectedDate);
   formData.append("delete", "true");
 
-  fetch("../../../api/hours.php", {
+  fetch(apiBasePath + "api/check-in.php", {
     method: "POST",
     body: formData,
   })
     .then((response) => response.json())
     .then((data) => {
       if (data.success) {
+        delete checkInsData[selectedDate];
         delete hoursData[selectedDate];
         delete monthHoursData[selectedDate];
+        
         renderCalendar();
+        updateQuickClockWidget();
         closeModal();
+        loadHours();
       } else {
-        alert(data.error || "Error deleting entry");
+        alert(data.error || "Error deleting check-in");
       }
     })
     .catch((error) => {
       console.error("Error:", error);
-      alert("Error deleting entry");
+      alert("Error deleting check-in");
     });
 }
 
@@ -482,6 +768,7 @@ function updateCalendarData() {
   // Reload data
   loadHours();
   loadAbsences();
+  loadCheckIns();
 }
 
 function updateStats() {
@@ -554,7 +841,7 @@ function loadFilteredHours() {
   params.append("from_date", filterFromDate);
   params.append("to_date", filterToDate);
 
-  fetch("../../../api/hours.php?" + params.toString() + getUserIdQuery())
+  fetch(apiBasePath + "api/hours.php?" + params.toString() + getUserIdQuery())
     .then((response) => response.json())
     .then((data) => {
       if (data.success) {
@@ -632,3 +919,71 @@ if (absenceModal) {
     }
   });
 }
+
+function downloadPDF() {
+  let fromDate = filterFromDate;
+  let toDate = filterToDate;
+
+  // If filter date is not set, default to the entire currently viewed month
+  if (!fromDate || !toDate) {
+    const firstDay = "01";
+    const lastDayObj = new Date(currentYear, currentMonth, 0);
+    const lastDay = String(lastDayObj.getDate()).padStart(2, "0");
+    const monthStr = String(currentMonth).padStart(2, "0");
+    
+    fromDate = `${currentYear}-${monthStr}-${firstDay}`;
+    toDate = `${currentYear}-${monthStr}-${lastDay}`;
+  }
+
+  // Build the API URL
+  let url = apiBasePath + "api/download-dtr.php?from_date=" + fromDate + "&to_date=" + toDate;
+
+  // If in supervisor view, append the target userId
+  if (typeof isSupervisorView !== "undefined" && isSupervisorView) {
+    url += "&userId=" + userId;
+  }
+
+  // Visual feedback: show loading state on the button
+  const btn = document.getElementById("btn-download-pdf");
+  if (!btn) return;
+  
+  const originalText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = "<span>⏳</span> Generating PDF...";
+
+  fetch(url)
+    .then(response => {
+      if (!response.ok) {
+        return response.text().then(text => {
+          try {
+            const err = JSON.parse(text);
+            throw new Error(err.error || "Server error");
+          } catch (e) {
+            const plainText = text.replace(/<[^>]*>/g, '').trim().substring(0, 150);
+            throw new Error(plainText || `Server error (${response.status})`);
+          }
+        });
+      }
+      return response.blob();
+    })
+    .then(blob => {
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.style.display = "none";
+      a.href = downloadUrl;
+      a.download = `DTR_${fromDate}_to_${toDate}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(downloadUrl);
+      document.body.removeChild(a);
+    })
+    .catch(error => {
+      console.error("Error downloading DTR:", error);
+      alert("Failed to download DTR: " + error.message);
+    })
+    .finally(() => {
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+    });
+}
+

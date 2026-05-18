@@ -33,10 +33,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $organization_id = $_POST['organization_id'] ?? '';
     $new_office_name = trim($_POST['new_office_name'] ?? '');
     $new_organization_name = trim($_POST['new_organization_name'] ?? '');
+    $terms_agree = $_POST['terms_agree'] ?? '';
 
     // Validation
     if (empty($name) || empty($email) || empty($password) || empty($role) || empty($office_id) || empty($organization_id)) {
         $error = "All fields are required.";
+    } elseif (empty($terms_agree)) {
+        $error = "You must agree to the Terms of Service.";
     } elseif ($password !== $confirm_password) {
         $error = "Passwords do not match.";
     } elseif (strlen($password) < 6) {
@@ -81,7 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 // Insert new user
-                $secret_key = getenv('SECRET_KEY') ?: 'default-secret-key';
+                $secret_key = $_ENV['SECRET_KEY'] ?? 'default-secret-key';
                 $hashed_password = hash_hmac('sha256', $password, $secret_key);
                 $stmt = $pdo->prepare("INSERT INTO users (name, email, password, role, office_id, organization_id) VALUES (?, ?, ?, ?, ?, ?)");
                 $stmt->execute([$name, $email, $hashed_password, $role, $office_id, $organization_id]);

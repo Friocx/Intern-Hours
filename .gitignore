@@ -3,3 +3,7 @@
 context
 
 node_modules
+
+vendor
+
+scratch

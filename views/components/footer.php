@@ -26,7 +26,8 @@
             <ul class="space-y-2">
               <li><a href="#" class="hover:text-white transition">Help Center</a></li>
               <li><a href="#" class="hover:text-white transition">Contact Us</a></li>
-              <li><a href="#" class="hover:text-white transition">Privacy Policy</a></li>
+              <li><a href="<?php echo $base_url ?? ''; ?>views/feed.php?page=terms" class="hover:text-white transition font-medium">Terms of Service</a></li>
+              <li><a href="<?php echo $base_url ?? ''; ?>views/feed.php?page=privacy" class="hover:text-white transition font-medium">Privacy Policy</a></li>
             </ul>
           </div>
         </div>
