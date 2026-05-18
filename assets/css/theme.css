@@ -300,3 +300,58 @@
   border-color: #2563eb !important;
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4) !important;
 }
+
+/* Quick Clock & Check-In Modal Dark Mode */
+.dark-mode .quick-clock-card {
+    background-color: var(--bg-secondary) !important;
+    border-color: var(--border-color) !important;
+}
+.dark-mode .quick-clock-title {
+    color: var(--text-primary) !important;
+}
+.dark-mode .quick-clock-time {
+    color: var(--text-secondary) !important;
+}
+.dark-mode .quick-clock-btn {
+    background-color: var(--bg-primary) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-secondary) !important;
+}
+.dark-mode .quick-clock-btn:hover {
+    background-color: #374151 !important;
+    color: var(--text-primary) !important;
+}
+.dark-mode .quick-clock-btn.active {
+    background-color: #1e3a8a !important;
+    border-color: #3b82f6 !important;
+    color: #60a5fa !important;
+}
+.dark-mode .quick-clock-btn .btn-status {
+    background-color: #374151 !important;
+    color: var(--text-secondary) !important;
+}
+.dark-mode .quick-clock-btn.active .btn-status {
+    background-color: #2563eb !important;
+    color: #ffffff !important;
+}
+.dark-mode .time-segment {
+    background-color: var(--bg-primary) !important;
+    border-color: var(--border-color) !important;
+}
+.dark-mode .time-segment-title {
+    color: var(--text-secondary) !important;
+}
+.dark-mode .time-input-group label {
+    color: var(--text-secondary) !important;
+}
+.dark-mode .time-input-group input[type="time"] {
+    background-color: var(--bg-secondary) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+.dark-mode .live-duration-display {
+    background-color: #064e3b !important;
+    border-color: #059669 !important;
+    color: #34d399 !important;
+}
+
