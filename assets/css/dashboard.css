@@ -212,6 +212,7 @@
 .day-cell.disabled {
   background: #f5f5f5;
   color: #ccc;
+}
 /* Status: Holidays */
 .day-cell.holiday {
   background-image: 
