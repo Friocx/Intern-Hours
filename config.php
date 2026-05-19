@@ -45,8 +45,15 @@ try {
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 
     // Auto-migration: Ensure columns exist
-    $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT FALSE");
-    $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_darkmode BOOLEAN DEFAULT FALSE");
+    $stmtPublic = $pdo->query("SHOW COLUMNS FROM users LIKE 'is_public'");
+    if (!$stmtPublic->fetch()) {
+        $pdo->exec("ALTER TABLE users ADD COLUMN is_public BOOLEAN DEFAULT FALSE");
+    }
+
+    $stmtDarkMode = $pdo->query("SHOW COLUMNS FROM users LIKE 'is_darkmode'");
+    if (!$stmtDarkMode->fetch()) {
+        $pdo->exec("ALTER TABLE users ADD COLUMN is_darkmode BOOLEAN DEFAULT FALSE");
+    }
 
     // Auto-migration: Create biometrics and attendance log tables
     $pdo->exec("
