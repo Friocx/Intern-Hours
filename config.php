@@ -55,6 +55,16 @@ try {
         $pdo->exec("ALTER TABLE users ADD COLUMN is_darkmode BOOLEAN DEFAULT FALSE");
     }
 
+    // Auto-migration: Adjust user columns to support Google signup and optional fields
+    try {
+        $pdo->exec("ALTER TABLE users MODIFY COLUMN nickname VARCHAR(255) NOT NULL DEFAULT ''");
+        $pdo->exec("ALTER TABLE users MODIFY COLUMN password VARCHAR(255) NULL");
+        $pdo->exec("ALTER TABLE users MODIFY COLUMN office_id INT NULL");
+        $pdo->exec("ALTER TABLE users MODIFY COLUMN organization_id INT NULL");
+    } catch (PDOException $e) {
+        // Silently continue if database changes are already applied or unsupported
+    }
+
     // Auto-migration: Create biometrics and attendance log tables
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS biometric_credentials (
