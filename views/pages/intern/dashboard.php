@@ -35,8 +35,7 @@ if ($office_id && $organization_id) {
         WHERE office_id = ? 
           AND organization_id = ? 
           AND role = 'Intern' 
-          AND birthdate IS NOT NULL 
-          AND birthdate != ''
+          AND birthdate IS NOT NULL
     ");
     $stmt->execute([$office_id, $organization_id]);
     $birthdays = $stmt->fetchAll(PDO::FETCH_ASSOC);

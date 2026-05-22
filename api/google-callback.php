@@ -128,8 +128,8 @@ if ($user) {
         exit;
     } else {
         // Create new user with Google account
-        $stmt = $pdo->prepare("INSERT INTO users (google_id, google_access_token, google_refresh_token, name, email, role) VALUES (?, ?, ?, ?, ?, 'Intern')");
-        $stmt->execute([$google_id, $token_data['access_token'], $token_data['refresh_token'] ?? '', $name, $email]);
+        $stmt = $pdo->prepare("INSERT INTO users (google_id, google_access_token, google_refresh_token, name, nickname, email, role) VALUES (?, ?, ?, ?, ?, ?, 'Intern')");
+        $stmt->execute([$google_id, $token_data['access_token'], $token_data['refresh_token'] ?? '', $name, $name, $email]);
         
         $user_id = $pdo->lastInsertId();
         
