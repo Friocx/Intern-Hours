@@ -89,12 +89,12 @@ if (isset($_SESSION['user_id'])) {
         </h1>
         <p class="text-base sm:text-lg md:text-xl text-zinc-300 mb-10 max-w-3xl mx-auto leading-relaxed">
           GitHub Repository: 
-          <a href="https://github.com/Tedeyy/Intern-Hours" target="_blank" rel="noopener"
+          <a href="https://github.com/Friocx/Intern-Hours" target="_blank" rel="noopener"
             class="inline-flex items-center gap-1.5 text-white font-semibold underline underline-offset-4 decoration-white/50 hover:text-indigo-300 hover:decoration-indigo-300 transition">
             <svg class="inline w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
             </svg>
-            Tedeyy/Intern-Hours
+            Friocx/Intern-Hours
           </a>
           <span class="block mt-3 text-white font-medium">OJT Tracker is a free and open-source platform designed to help interns track their hours, submit reports, and stay connected. Built for interns by interns.</span>
         </p>
@@ -498,9 +498,9 @@ if (isset($_SESSION['user_id'])) {
         <h2 class="text-4xl md:text-5xl font-extrabold text-white mb-4">Meet the Developers</h2>
         <p class="text-zinc-400 text-lg max-w-xl mx-auto">
           The people who made this possible — contributors from the
-          <a href="https://github.com/Tedeyy/Intern-Hours" target="_blank" rel="noopener"
+          <a href="https://github.com/Friocx/Intern-Hours" target="_blank" rel="noopener"
             class="text-purple-300 underline underline-offset-4 hover:text-white transition">
-            Tedeyy/Intern-Hours
+            Friocx/Intern-Hours
           </a>
           repository, sorted by longest contributor.
         </p>
@@ -576,7 +576,7 @@ if (isset($_SESSION['user_id'])) {
       const errorEl   = document.getElementById('devs-error');
 
       try {
-        const repoOwner = 'Tedeyy';
+        const repoOwner = 'Friocx';
         const repoName  = 'Intern-Hours';
 
         // Get all contributors (handles pagination up to 100)
@@ -586,13 +586,23 @@ if (isset($_SESSION['user_id'])) {
         if (!contribRes.ok) throw new Error(`GitHub API ${contribRes.status}`);
         const contributors = await contribRes.json();
 
-        // Fetch full user profile for each contributor in parallel
+        // Fetch full user profile for each contributor in parallel, with fallback for rate limits
         const profiles = await Promise.all(
-          contributors.map(c => fetch(c.url).then(r => r.json()))
+          contributors.map(c => 
+            fetch(c.url)
+              .then(r => r.ok ? r.json() : null)
+              .catch(() => null)
+              .then(profile => ({
+                login: c.login,
+                avatar_url: c.avatar_url,
+                name: profile ? profile.name : null,
+                contributions: c.contributions
+              }))
+          )
         );
 
-        // Sort by account creation date, oldest first
-        profiles.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        // Sort by contributions (descending) so top contributor is first
+        profiles.sort((a, b) => b.contributions - a.contributions);
 
         // Remove skeleton cards
         container.querySelectorAll('.dev-skeleton').forEach(el => el.remove());

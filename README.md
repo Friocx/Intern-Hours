@@ -41,7 +41,7 @@ A modern, efficient web application designed to track and manage intern working 
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/Tedeyy/Intern-Hours.git
+    git clone https://github.com/Friocx/Intern-Hours.git
    ```
 
 2. **Database Setup**:
